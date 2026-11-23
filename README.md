@@ -1,4 +1,4 @@
-# Kennedy and DR-CMD for a missing binary exposure
+# Kennedy and DRCMD for a missing binary exposure
 
 This standalone R study compares exactly three procedures: Kennedy ratio GAM
 (gamma + beta), Kennedy direct GAM (gamma + m), and DR-CMD. The target is the
@@ -48,7 +48,7 @@ Rscript scripts/render.R
 [R/kennedy_ratio.R](R/kennedy_ratio.R) fits the shared observation, exposure imputation and gamma functions, Gaussian beta regressions, and the common EIF.
 [R/kennedy_direct.R](R/kennedy_direct.R) fits separate quasibinomial logit GAMs using lambda weights on every outer-training row. Both use `gam::s` smooths with two degrees of freedom. Shared regressions use single-library SuperLearner with five internal CV folds. Direct outcome GAMs have fixed defaults and no additional CV. Only kappa and gamma denominators are truncated to [0.01,0.99]; beta/gamma, ATEs and intervals are never clipped. Direct fitting uses the same upstream fits and scores. SEs use the SD of individual arm-score differences divided by sqrt(n).
 
-[R/drcmd.R](R/drcmd.R) calls the exported package procedure on observed variables with SL.gam throughout, k=5, cv_folds=5, cutoff=.01, EEM and TMLE disabled. Its native `psi_hat_ate` arm difference and corresponding SE give the normal interval. DR-CMD's native outer folds are captured and reused by both Kennedy versions. DR-CMD fits its own weighted nuisance regressions. Thus this compares implemented procedures with different nuisance targets and fitting steps.
+[R/drcmd.R](R/drcmd.R) calls the exported package procedure on observed variables with SL.gam throughout, k=5, cv_folds=5, cutoff=.01, EEM and TMLE disabled. Its native `psi_hat_ate` arm difference and corresponding SE give the normal interval. DRCMD's native outer folds are captured and reused by both Kennedy versions. DR-CMD fits its own weighted nuisance regressions. Thus this compares implemented procedures with different nuisance targets and fitting steps.
 
 The seed is 20261123. 
 
