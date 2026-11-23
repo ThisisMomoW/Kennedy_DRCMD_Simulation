@@ -1,0 +1,5 @@
+PASS: reference estimates, SEs and intervals reproduced for all three methods.
+PASS: population calibration, binary Bayes identities, marginal RD, and quadrature accuracy.
+PASS: native exported drcmd call, Gaussian augmentation, native folds, no EEM or TMLE.
+PASS: score identity, complete-data reduction, missing-value safety, permutation and paired SE.
+PASS: fold isolation; fractional weights at gam.fit; manual gam formula and predictions.

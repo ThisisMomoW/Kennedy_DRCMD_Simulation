@@ -1,0 +1,16 @@
+"key","scenario","n","level","outer_fold","stage","training_n","observed0","observed1","last_gam_n","last_gam_zero","last_gam_one","last_gam_call_index","nonfinite_qr_events","error","warnings"
+"e10_r0091","e10",1000,1.5,2,"lambda",163,74,89,131,58,73,5,1,"All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+"
+"e10_r0195","e10",1000,1.5,5,"lambda",168,82,86,135,69,66,5,1,"All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+"
+"e11_r0053","e11",500,3,1,"lambda",90,43,47,72,32,40,5,1,"All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+"
+"e11_r0139","e11",500,3,1,"lambda",75,38,37,60,31,29,5,1,"All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+"
+"nl01_r0196","nl01",500,1,4,"lambda",87,42,45,70,35,35,5,1,"All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+"

@@ -1,0 +1,6 @@
+
+/library/
+
+/results/logs/
+/validation/*.log
+/validation/SMOKE_COMPLETE

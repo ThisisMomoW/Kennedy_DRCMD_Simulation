@@ -1,0 +1,49 @@
+Package: drcmd
+Title: Doubly-Robust Causal Inference with Missing Data
+Version: 0.1.0
+Authors@R: c(
+    person("Keith", "Barnatchez",
+           email = "keithbarnatchez@gmail.com",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-1451-9335")),
+    person("Griffin", "DesRoches",
+           role = "aut")
+    )
+Description: Doubly-robust estimation of counterfactual means and average treatment
+    effects for binary point treatments when outcomes, treatments, or covariates
+    are incompletely observed, with risk ratios and odds ratios available for
+    binary outcomes. Identification relies on consistency, conditional treatment
+    exchangeability, treatment positivity, and independence of the complete-case
+    indicator and partially observed variables conditional on fully observed
+    variables, with positive complete-case probabilities. Missing-data methods
+    follow the semiparametric framework described by Tsiatis (2006)
+    <doi:10.1007/0-387-37345-4>. Nuisance functions are estimated using
+    'SuperLearner' with user-specified libraries and optional cross-fitting.
+    Known complete-case probabilities can be supplied for two-phase sampling
+    designs, and fully observed auxiliary variables can be included in the
+    missingness and augmentation regressions.
+License: GPL (>= 3)
+URL: https://github.com/keithbarnatchez/drcmd, https://kbarnatchez.com/drcmd/
+BugReports: https://github.com/keithbarnatchez/drcmd/issues
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    SuperLearner,
+    ggplot2
+Suggests:
+    gam,
+    hal9001,
+    knitr,
+    nnls,
+    ranger,
+    rmarkdown,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+RemoteType: github
+RemoteHost: api.github.com
+RemoteUsername: keithbarnatchez
+RemoteRepo: drcmd
+RemoteRef: 76dc26abdb921025a2710b2826e96efe9b9df800
+RemoteSha: 76dc26abdb921025a2710b2826e96efe9b9df800

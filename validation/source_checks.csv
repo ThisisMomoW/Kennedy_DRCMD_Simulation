@@ -1,0 +1,5 @@
+"reference_source","standalone_source","reference_md5","standalone_md5"
+"methods/kennedy/gamma_beta/R/estimator.R","R/kennedy_ratio.R","6a97c9822e62d24e850ffdfa39ec0701","6a97c9822e62d24e850ffdfa39ec0701"
+"simulation/direct_m_gam/estimator.R","R/kennedy_direct.R","dc27e6c4f472c18357d80d12bae33fe9","7cbd5e19581b922a69da466711d0af04"
+"methods/drcmd/estimator.R","R/drcmd.R","5fd26b422da6e9b1c899cbabb61db846","72e752d3e4a9efddeeea21efac1b4daa"
+"utils/study_audit.R","R/audit.R","adff8dd1562a5c3e3564e78a98b5a1d6","adff8dd1562a5c3e3564e78a98b5a1d6"

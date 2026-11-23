@@ -1,0 +1,31 @@
+"key","scenario","group","n","level","delta","q","truth","rep","method","estimate","se","lower","upper","point_valid","interval_valid","realized_missingness","observed0","observed1","failure_type","error","warnings","seconds","data_hash","fold_hash","generation_seed","fitting_seed"
+"e10_r0091","e10",2,1000,1.5,0,0.8,0.104555441174916,91,"original",NA,NA,NA,NA,FALSE,FALSE,0.803,92,105,"fitting_error","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",1.049,"4f47aa11de6dcc04e0113a663a1b6fa4","f72e9727e727cdbe535bfc1e44fd5ed3","10407 1648400391 -259491770 -1249692446 1908683285 -792978852 -69883266","10407 1631125597 -213096027 -1933008586 1046421052 -1203628781 1041623890"
+"e10_r0091","e10",2,1000,1.5,0,0.8,0.104555441174916,91,"direct_m_gam",NA,NA,NA,NA,FALSE,FALSE,0.803,92,105,"upstream_kennedy_failure","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",0,"4f47aa11de6dcc04e0113a663a1b6fa4","f72e9727e727cdbe535bfc1e44fd5ed3","10407 1648400391 -259491770 -1249692446 1908683285 -792978852 -69883266","10407 1631125597 -213096027 -1933008586 1046421052 -1203628781 1041623890"
+"e10_r0195","e10",2,1000,1.5,0,0.8,0.104555441174916,195,"original",NA,NA,NA,NA,FALSE,FALSE,0.787,104,109,"fitting_error","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",2.042,"751fe8bf766935107614157d91e60f54","d5a5d66fd06f609dcc31287fb7253b60","10407 1617573391 1671095558 -805644825 -593758496 -372273566 -496154965","10407 1556219174 1596093233 280567901 152809779 109006351 -1858261059"
+"e10_r0195","e10",2,1000,1.5,0,0.8,0.104555441174916,195,"direct_m_gam",NA,NA,NA,NA,FALSE,FALSE,0.787,104,109,"upstream_kennedy_failure","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",0,"751fe8bf766935107614157d91e60f54","d5a5d66fd06f609dcc31287fb7253b60","10407 1617573391 1671095558 -805644825 -593758496 -372273566 -496154965","10407 1556219174 1596093233 280567901 152809779 109006351 -1858261059"
+"e11_r0053","e11",2,500,3,0,0.8,0.0751434473300117,53,"original",NA,NA,NA,NA,FALSE,FALSE,0.776,49,63,"fitting_error","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",0.117999999999999,"ea95d8da596c35d6dde4229d0e5f5791","dec9b21bbbb269537038fb7bb1a36204","10407 614428899 616231859 -1984786560 1347556296 1960407924 856290742","10407 1616818811 -1349996122 1843471928 -1375625973 212280129 44085180"
+"e11_r0053","e11",2,500,3,0,0.8,0.0751434473300117,53,"direct_m_gam",NA,NA,NA,NA,FALSE,FALSE,0.776,49,63,"upstream_kennedy_failure","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",0,"ea95d8da596c35d6dde4229d0e5f5791","dec9b21bbbb269537038fb7bb1a36204","10407 614428899 616231859 -1984786560 1347556296 1960407924 856290742","10407 1616818811 -1349996122 1843471928 -1375625973 212280129 44085180"
+"e11_r0139","e11",2,500,3,0,0.8,0.0751434473300117,139,"original",NA,NA,NA,NA,FALSE,FALSE,0.802,48,51,"fitting_error","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",0.231999999999999,"df1f32e1b4b135b94dff4464174d4ff5","cd3f06cbcb6b3009394d95f481ad7538","10407 -534730560 244090016 1125272500 -2112366445 625334880 -1995626125","10407 565903388 969353435 -1486168300 -1317058363 217753395 -1532857247"
+"e11_r0139","e11",2,500,3,0,0.8,0.0751434473300117,139,"direct_m_gam",NA,NA,NA,NA,FALSE,FALSE,0.802,48,51,"upstream_kennedy_failure","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",0,"df1f32e1b4b135b94dff4464174d4ff5","cd3f06cbcb6b3009394d95f481ad7538","10407 -534730560 244090016 1125272500 -2112366445 625334880 -1995626125","10407 565903388 969353435 -1486168300 -1317058363 217753395 -1532857247"
+"nl01_r0196","nl01",3,500,1,2,0.8,0.109391881368588,196,"original",NA,NA,NA,NA,FALSE,FALSE,0.792,46,58,"fitting_error","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",2.479,"9d769a849d306965f78debf4e7fdece2","3c22edbc86a65effacf568df98368915","10407 340137502 1515276244 -1208135237 -1335007567 1238687328 381433191","10407 -1938317100 -1669699725 -2102457210 -1214714820 1370580723 -935153592"
+"nl01_r0196","nl01",3,500,1,2,0.8,0.109391881368588,196,"direct_m_gam",NA,NA,NA,NA,FALSE,FALSE,0.792,46,58,"upstream_kennedy_failure","All algorithms dropped from library","iterations terminated prematurely because of singularities | Error in algorithm SL.gam 
+  The Algorithm will be removed from the Super Learner (i.e. given weight 0) 
+",0,"9d769a849d306965f78debf4e7fdece2","3c22edbc86a65effacf568df98368915","10407 340137502 1515276244 -1208135237 -1335007567 1238687328 381433191","10407 -1938317100 -1669699725 -2102457210 -1214714820 1370580723 -935153592"

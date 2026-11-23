@@ -1,0 +1,4 @@
+Slurm array: 37256195
+Master seed: 20261123
+Tasks: 320; datasets per task: 10; max concurrent tasks: 24
+CPUs per task: 1; memory: 3G; wall time: 02:00:00

@@ -1,0 +1,510 @@
+#' @title Obtain nuisance function estimates
+#'
+#' @description Function for obtaining estimates of all relevant nuisance functions
+#' @param idx Indices to carry out estimation over
+#' @param Y Outcome variable. Can be continuous or binary
+#' @param A A binary treatment variable (1=treated, 0=control)
+#' @param X Dataframe containing baseline covariates
+#' @param Z Dataframe containing all non-missing variables
+#' @param R Binary missingness indicator, where 0 indicates missing data
+#' @param m_learners A character vector containing learners to be used for the
+#' outcome regression. A vector of SuperLearner library names
+#' @param g_learners A character vector containing learners to be used for the
+#' propensity score. A vector of SuperLearner library names
+#' @param r_learners A character vector containing learners to be used for the
+#' missingness indicator regression. A vector of SuperLearner library
+#' names
+#' @param Rprobs A vector of probabilities for R
+#' @param cutoff Cutoff for propensity score truncation
+#' @param cv_folds Number of cross-validation folds for SuperLearner
+#' @param quiet Logical indicating whether to suppress progress messages
+#'
+#' @return A list of nuisance estimates
+#' @keywords internal
+#' @examples
+#' \dontrun{
+#' n <- 500
+#' X <- data.frame(X1 = rnorm(n))
+#' A <- rbinom(n, 1, plogis(X$X1))
+#' Y <- A + X$X1 + rnorm(n)
+#' R <- rbinom(n, 1, plogis(X$X1))
+#' Y[R == 0] <- 0; A[R == 0] <- 0
+#' Z <- X
+#' nuis <- get_nuisance_ests(1:n, Y, A, X, Z, R,
+#'                           m_learners = "SL.glm",
+#'                           g_learners = "SL.glm",
+#'                           r_learners = "SL.glm",
+#'                           Rprobs = NA, cutoff = 0.025)
+#' }
+get_nuisance_ests <- function(idx,Y,A,X,Z,R,
+                              m_learners,g_learners,r_learners,
+                              Rprobs,cutoff,cv_folds=5,quiet=TRUE) {
+
+  kappa_hat <- Rprobs
+  if (all(R==1)) { # if no missing data
+    kappa_hat <- rep(1,nrow(X))
+  } else {
+    if (any(is.na(Rprobs) )) {
+      if (!quiet) message("  Fitting missingness model P(R=1|Z)...")
+      kappa_hat <- est_kappa(idx,Z,R,r_learners,cv_folds)
+    }
+    if (!is.null(cutoff)) {
+      kappa_hat <- truncate_r(kappa_hat,cutoff)
+    }
+  }
+  if (!quiet) message("  Fitting outcome model E[Y|A,X]...")
+  m_a_hat <- est_m_a(idx,Y,A,X,R,kappa_hat,m_learners,cv_folds)
+  if (!quiet) message("  Fitting propensity score P(A=1|X)...")
+  g_hat <- est_g(idx,A,X,R,kappa_hat,g_learners,cv_folds)
+
+  # Trimming
+  if (!is.null(cutoff)) {
+    g_hat <-  truncate_g(g_hat,cutoff)
+  }
+
+  return(list(kappa_hat=kappa_hat,m_a_hat=m_a_hat,g_hat=g_hat))
+
+}
+
+
+#' @title Estimating outcome regression
+#'
+#' @description Function for obtaining estimate of `E[Y | A=a, X]`. Estimation is
+#' carried out with SuperLearer, using learners specified in m_learners
+#' @param idx Indices to carry out estimation over
+#' @param Y Outcome variable. Can be continuous or binary
+#' @param A A binary treatment variable (1=treated, 0=control)
+#' @param X Dataframe containing baseline covariates
+#' @param R Binary missingness indicator, where 0 indicates missing data
+#' @param kappa_hat A numeric vector containing the fitted values of kappa
+#' @param m_learners A character vector containing the names of the superlearner algorithms
+#' @return A list containing the estimate of `E[Y | A=a, X]`
+#' @keywords internal
+#' @examples
+#' \dontrun{
+#' n <- 500
+#' X <- rnorm(n)
+#' A <- rbinom(n, 1, plogis(X))
+#' R <- rbinom(n, 1, plogis(X))
+#' Y <- A + X + rnorm(n)
+#' Y[R == 0] <- 0; A[R == 0] <- 0
+#' X <- data.frame(X)
+#' kappa_hat <- rep(1, n)
+#' m_learners <- c('SL.glm')
+#' m_hat <- est_m_a(idx = 1:n, Y = Y, A = A, X = X, R = R,
+#'                  kappa_hat = kappa_hat, m_learners = m_learners)
+#' }
+est_m_a <- function(idx, Y, A, X, R,
+                    kappa_hat,
+                    m_learners,
+                    cv_folds=5) {
+
+  yfam <- gaussian()
+  if (check_binary(Y)) {
+    yfam <- binomial()
+  }
+
+  data <- cbind(X,A)
+  weights <- R[idx] / kappa_hat[idx]
+  cv_control <- list(V = cv_folds)
+  if (yfam$family == "binomial") {
+    cv_control <- binary_cv_control(Y[idx], weights, cv_folds,
+                                    "Outcome regression")
+  }
+
+  # if outcome is binary, weights will generate unecessary warnings
+  m_a_hat <- withCallingHandlers(
+    SuperLearner::SuperLearner(Y=Y[idx],
+                              X=data[idx,],
+                              SL.library=m_learners,
+                              family=yfam,
+                              obsWeights=weights,
+                              cvControl=cv_control),
+    warning = function(w) {
+      if (conditionMessage(w) == "non-integer #successes in a binomial glm!") {
+        invokeRestart("muffleWarning")
+      }
+    })
+
+  # get fitted values under A=1
+  data[,ncol(data)] <- 1
+  m_1_hat <- predict(m_a_hat, newdata=data)$pred
+  data[,ncol(data)] <- 0
+  m_0_hat <- predict(m_a_hat, newdata=data)$pred
+
+  return(list(m_1_hat=m_1_hat,m_0_hat=m_0_hat))
+}
+
+
+#' @title Estimate the propensity score
+#'
+#' @description Function for obtaining propensity score estimates P(A=a|X)
+#' @param idx Indices to carry out estimation over
+#' @param A A binary treatment variable (1=treated, 0=control)
+#' @param X Dataframe containing baseline covariates
+#' @param R Binary missingness indicator, where 0 indicates missing data
+#' @param kappa_hat A numeric vector containing the fitted values of kappa
+#' @param g_learners A character vector containing the names of the learners for estimation
+#' @param cv_folds Number of cross-validation folds for SuperLearner
+#'
+#' @return A list containing the estimate of `E[Y | A=a, X, W]`
+#' @keywords internal
+#' @examples
+#' \dontrun{
+#' n <- 500
+#' X <- rnorm(n)
+#' A <- rbinom(n, 1, plogis(X))
+#' R <- rbinom(n, 1, plogis(X))
+#' A[R == 0] <- 0
+#' X <- data.frame(X)
+#' kappa_hat <- rep(1, n)
+#' g_learners <- c('SL.glm')
+#' g_hat <- est_g(idx = 1:n, A = A, X = X, R = R,
+#'                kappa_hat = kappa_hat, g_learners = g_learners)
+#' }
+est_g <- function(idx,A, X, R, kappa_hat,
+                  g_learners,
+                  cv_folds=5) {
+
+  weights <- R[idx] / kappa_hat[idx]
+  cv_control <- binary_cv_control(A[idx], weights, cv_folds,
+                                  "Treatment regression")
+
+  # regression with weights + binary outcome can create unnecessary warnings
+  g_hat <- with_probability_fit_checks(
+    SuperLearner::SuperLearner(
+      Y = A[idx],
+      X = X[idx, , drop = FALSE],
+      family = binomial(),
+      SL.library = g_learners,
+      obsWeights = weights,
+      cvControl = cv_control
+    ),
+    model = "Treatment regression"
+  )
+
+  g_hat <- predict(g_hat, newdata=X)$pred
+  check_probability_predictions(g_hat, "Treatment regression")
+
+  return(g_hat)
+}
+
+#' @title Estimate complete case propensity scores
+#'
+#' @description Function for obtaining complete case propensity score estimates
+#'
+#' @param idx Indices to carry out estimation over
+#' @param Z Dataframe containing all non-missing variables
+#' @param R Binary missingness indicator, where 0 indicates missing data
+#' @param r_learners A character vector specifying learners to be used for estimation
+#'
+#' @return A numeric vector containing the estimate of `E[R | Z]`
+#' @keywords internal
+#' @examples
+#' \dontrun{
+#' n <- 500
+#' Z <- rnorm(n)
+#' R <- rbinom(n, 1, plogis(Z))
+#' Z <- data.frame(Z)
+#' r_learners <- c('SL.glm')
+#' kappa_hat <- est_kappa(idx = 1:n, Z = Z, R = R,
+#'                        r_learners = r_learners)
+#' }
+est_kappa <- function (idx,Z, R,
+                       r_learners,
+                       cv_folds=5) {
+
+  loadNamespace("SuperLearner")
+  cv_control <- binary_cv_control(R[idx], rep(1, length(idx)), cv_folds,
+                                  "Complete-case regression")
+  kappa_hat <- with_probability_fit_checks(
+    SuperLearner::SuperLearner(Y=R[idx],X=Z[idx,,drop=FALSE],
+                                          family=binomial(),
+                                          SL.library=r_learners,
+                                          cvControl=cv_control),
+    model = "Complete-case regression")
+  kappa_hat <- predict(kappa_hat, newdata=Z)$pred
+  check_probability_predictions(kappa_hat, "Complete-case regression")
+
+  return(kappa_hat)
+
+}
+
+#' @title Perform pseudo-outcome regression
+#'
+#' @description Function for obtaining estimate of `E[phi_a | Z]` through pseudo-outcome
+#' regression. Calls inner function to perform estimation, depending on whether
+#' user wishes to perform empirical efficiency maximization or not
+#' @param idx Indices to carry out estimation over
+#' @param R Binary missingness indicator, where 0 indicates missing data
+#' @param Z Dataframe containing all non-missing variables
+#' @param phi_1_hat Vector of pseudo-outcome values under A=1
+#' @param phi_0_hat Vector of pseudo-outcome values under A=0
+#' @param kappa_hat A numeric vector containing the fitted values of kappa
+#' @param eem_ind A logical value indicating whether to estimate via EEM
+#' @param po_learners A character vector containing the names of the SuperLearner algorithms
+#' @param Y Outcome variable. Can be continuous or binary
+#' @param cv_folds Number of cross-validation folds for SuperLearner
+#' @param quiet Logical indicating whether to suppress progress messages
+#' @param att Logical indicating whether to compute pseudo-outcome regression for ATT
+#' @param atc Logical indicating whether to compute pseudo-outcome regression for ATC
+#'
+#' @return A list containing the estimate of `E[phi_a | Z]` for a=0 and a=1
+#' @keywords internal
+#' @examples
+#' \dontrun{
+#' n <- 500
+#' Z <- data.frame(Z1 = rnorm(n))
+#' R <- rbinom(n, 1, 0.7)
+#' phi_1_hat <- rnorm(n)
+#' phi_0_hat <- rnorm(n)
+#' kappa_hat <- rep(0.7, n)
+#' Y <- rnorm(n)
+#' varphi <- est_varphi_main(1:n, R, Z, phi_1_hat, phi_0_hat,
+#'                           kappa_hat, eem_ind = FALSE,
+#'                           po_learners = "SL.glm", Y = Y)
+#' }
+est_varphi_main <- function(idx, R,Z,
+                            phi_1_hat, phi_0_hat,
+                            kappa_hat,
+                            eem_ind,
+                            po_learners,
+                            Y,
+                            cv_folds=5,quiet=TRUE,
+                            att=FALSE, atc=FALSE,
+                            phi_att_hat=NULL, phi_atc_hat=NULL){
+
+  if (all(R==1)) { # when no missing data at all, no need for pseudo-outcome reg
+    result <- list(varphi_1_hat=rep(0,length(kappa_hat)),
+                   varphi_0_hat=rep(0,length(kappa_hat)),
+                   varphi_diff_hat=rep(0,length(kappa_hat)))
+    if (att) result$varphi_att_hat <- rep(0, length(kappa_hat))
+    if (atc) result$varphi_atc_hat <- rep(0, length(kappa_hat))
+    return(result)
+  }
+
+  if (!quiet) message("  Fitting pseudo-outcome regression E[phi|Z]...")
+
+  result <- {
+
+    if (eem_ind==TRUE) { # estimate via EEM
+      res <- est_varphi_eem(idx, R, Z,
+                               phi_1_hat, phi_0_hat,
+                               kappa_hat,
+                               po_learners,
+                               Y,
+                               cv_folds)
+    } else {
+      res <- est_varphi(idx, R, Z,
+                           phi_1_hat, phi_0_hat,
+                           po_learners,
+                           Y,
+                           cv_folds)
+    }
+
+    # ATT pseudo-outcome regression
+    if (att && !is.null(phi_att_hat)) {
+      varphi_att_fit <- fit_augmentation_sl(Y=phi_att_hat[idx],
+                                                    X=Z[idx,,drop=FALSE],
+                                                    family=gaussian(),
+                                                    SL.library=po_learners,
+                                                    obsWeights=R[idx],
+                                                    cvControl=list(V=cv_folds))
+      res$varphi_att_hat <- predict_augmentation_sl(varphi_att_fit, Z)
+    }
+
+    # ATC pseudo-outcome regression
+    if (atc && !is.null(phi_atc_hat)) {
+      varphi_atc_fit <- fit_augmentation_sl(Y=phi_atc_hat[idx],
+                                                    X=Z[idx,,drop=FALSE],
+                                                    family=gaussian(),
+                                                    SL.library=po_learners,
+                                                    obsWeights=R[idx],
+                                                    cvControl=list(V=cv_folds))
+      res$varphi_atc_hat <- predict_augmentation_sl(varphi_atc_fit, Z)
+    }
+
+    res
+  }
+
+  return(result)
+}
+
+#' @title Perform pseudo-outcome regression with conventional loss function
+#' @description Outer function for obtaining estimate of `E[phi | Z]`
+#' @param idx Indices to carry out estimation over
+#' @param R Binary missingness indicator, where 0 indicates missing data
+#' @param Z Dataframe containing all non-missing variables
+#' @param phi_1_hat A numeric vector containing the fitted values of phi under A=1
+#' @param phi_0_hat A numeric vector containing the fitted values of phi under A=0
+#' @param po_learners A character vector containing the names of the superlearner algorithms
+#' @return A list containing the estimate of `E[phi | Z]` for a=0 and a=1
+#' @keywords internal
+#' @examples
+#' \dontrun{
+#' n <- 500
+#' Z <- data.frame(Z1 = rnorm(n))
+#' R <- rbinom(n, 1, 0.7)
+#' phi_1_hat <- rnorm(n)
+#' phi_0_hat <- rnorm(n)
+#' Y <- rnorm(n)
+#' varphi <- est_varphi(1:n, R, Z, phi_1_hat, phi_0_hat,
+#'                      po_learners = "SL.glm", Y = Y)
+#' }
+est_varphi <- function(idx, R, Z,
+                       phi_1_hat, phi_0_hat,
+                       po_learners,
+                       Y,
+                       cv_folds=5) {
+
+  varphi_diff_hat <- fit_augmentation_sl(Y=phi_1_hat[idx]-phi_0_hat[idx],
+                                                X=Z[idx,,drop=FALSE],
+                                                family=gaussian(),
+                                                SL.library=po_learners,
+                                                obsWeights=R[idx],
+                                                cvControl=list(V=cv_folds))
+
+  varphi_1_hat <- fit_augmentation_sl(Y=phi_1_hat[idx],X=Z[idx,,drop=FALSE],
+                                             family=gaussian(),
+                                             SL.library=po_learners,
+                                             obsWeights=R[idx],
+                                             cvControl=list(V=cv_folds))
+   varphi_0_hat <- fit_augmentation_sl(Y=phi_0_hat[idx],X=Z[idx,,drop=FALSE],
+                                             family=gaussian(),
+                                             SL.library=po_learners,
+                                             obsWeights=R[idx],
+                                             cvControl=list(V=cv_folds))
+
+  varphi_1_hat <- predict_augmentation_sl(varphi_1_hat, Z)
+  varphi_0_hat <- predict_augmentation_sl(varphi_0_hat, Z)
+  varphi_diff_hat <- predict_augmentation_sl(varphi_diff_hat, Z)
+
+  return(list(varphi_1_hat=varphi_1_hat,varphi_0_hat=varphi_0_hat,
+              varphi_diff_hat=varphi_diff_hat))
+}
+
+
+#' @title Perform pseudo-outcome regression with empirical efficiency maximization
+#' @description Function for obtaining estimate of `E[phi_a | Z]` via empirical efficiency
+#' maximization
+#'
+#' @param idx Indices to carry out estimation over
+#' @param R Binary missingness indicator, where 0 indicates missing data
+#' @param Z Dataframe containing all non-missing variables
+#' @param phi_1_hat Vector of predicted phi under A=1
+#' @param phi_0_hat Vector of predicted phi under A=0
+#' @param kappa_hat A numeric vector containing the fitted values of kappa
+#' @param po_learners A character vector containing the names of the superlearner algorithms
+#' @param Y Outcome variable. Can be continuous or binary
+#'
+#' @return A list containing the estimate of `E[phi_a | Z]` for a=0 and a=1
+#' @keywords internal
+#' @examples
+#' \dontrun{
+#' n <- 500
+#' Z <- data.frame(Z1 = rnorm(n))
+#' R <- rbinom(n, 1, 0.7)
+#' phi_1_hat <- rnorm(n)
+#' phi_0_hat <- rnorm(n)
+#' kappa_hat <- rep(0.7, n)
+#' Y <- rnorm(n)
+#' varphi <- est_varphi_eem(1:n, R, Z, phi_1_hat, phi_0_hat,
+#'                          kappa_hat, po_learners = "SL.glm", Y = Y)
+#' }
+est_varphi_eem <- function(idx, R, Z,
+                           phi_1_hat, phi_0_hat,
+                           kappa_hat,
+                           po_learners,
+                           Y,
+                           cv_folds=5) {
+
+  if (any(!is.finite(kappa_hat[idx]) | kappa_hat[idx] <= 0)) {
+    stop("EEM requires positive, finite complete-case probabilities")
+  }
+
+  ratio <- R / kappa_hat
+  eem_term <- ratio - 1
+  eem_weights <- eem_term^2
+  ytilde1 <- ytilde0 <- numeric(length(R))
+  active <- is.finite(eem_term) & eem_term != 0
+  ytilde1[active] <- ratio[active] * phi_1_hat[active] / eem_term[active]
+  ytilde0[active] <- ratio[active] * phi_0_hat[active] / eem_term[active]
+
+  # Estimate E[phi|Z] via EEM
+  varphi_1_hat <- fit_augmentation_sl(Y=ytilde1[idx],X=Z[idx,,drop=FALSE],
+                                           family=gaussian(),SL.library=po_learners,
+                                           obsWeights=eem_weights[idx],
+                                           cvControl=list(V=cv_folds))
+  varphi_0_hat <- fit_augmentation_sl(Y=ytilde0[idx],X=Z[idx,,drop=FALSE],
+                                             family=gaussian(),SL.library=po_learners,
+                                             obsWeights=eem_weights[idx],
+                                             cvControl=list(V=cv_folds))
+  varphi_1_hat <- predict_augmentation_sl(varphi_1_hat, Z)
+  varphi_0_hat <- predict_augmentation_sl(varphi_0_hat, Z)
+
+  varphi_diff_hat <- fit_augmentation_sl(Y=ytilde1[idx]-ytilde0[idx],X=Z[idx,,drop=FALSE],
+                                                family=gaussian(),SL.library=po_learners,
+                                                obsWeights=eem_weights[idx],
+                                                cvControl=list(V=cv_folds))
+  varphi_diff_hat <- predict_augmentation_sl(varphi_diff_hat, Z)
+
+  return(list(varphi_1_hat=varphi_1_hat,varphi_0_hat=varphi_0_hat,
+              varphi_diff_hat=varphi_diff_hat))
+}
+
+#' @title SuperLearner wrapper for the highly-adaptive lasso
+#'
+#' @description Wrapper for the highly-adaptive lasso (HAL) algorithm
+#'implemented in the hal9001 package
+#' @param Y Outcome variable
+#' @param X Matrix of covariates
+#' @param newX Matrix of covariates for prediction
+#' @param family Family of the outcome variable
+#' @param obsWeights Observation weights
+#' @param ... Additional arguments to pass to the HAL function
+#' @return A list containing the prediction and the fitted model
+#' @export
+#' @examples
+#' \dontrun{
+#' n <- 200
+#' X <- data.frame(X1 = rnorm(n))
+#' Y <- X$X1 + rnorm(n)
+#' fit <- SL.hal9001(Y, X, newX = X, family = gaussian(),
+#'                   obsWeights = rep(1, n))
+#' head(fit$pred)
+#' }
+SL.hal9001 <- function(Y, X, newX, family, obsWeights, ...) {
+
+  fit <- hal9001::fit_hal(X = X, Y = Y, family = family$family,
+                          max_degree=2,num_knots=3,
+                          weights = obsWeights, ...)
+
+  # Predict on new data
+  pred <- predict(fit, new_data = newX)
+
+  # Return in required format
+  fit_obj <- list(object = fit)
+  class(fit_obj) <- "SL.hal9001"
+  return(list(pred = pred, fit = fit_obj))
+}
+
+#' @title Prediction wrapper for the highly-adaptive lasso
+#' @description Prediction wrapper for the highly-adaptive lasso (HAL) algorithm
+#' implemented in the hal9001 package
+#' @param object A fitted SL.hal9001 object
+#' @param newdata Data frame of covariates for prediction
+#' @param ... Additional arguments (unused)
+#' @return Predicted values on new data
+#' @export
+#' @examples
+#' \dontrun{
+#' n <- 200
+#' X <- data.frame(X1 = rnorm(n))
+#' Y <- X$X1 + rnorm(n)
+#' fit <- SL.hal9001(Y, X, newX = X, family = gaussian(),
+#'                   obsWeights = rep(1, n))
+#' preds <- predict(fit$fit, newdata = X)
+#' }
+predict.SL.hal9001 <- function(object, newdata, ...) {
+  predict(object$object, new_data = newdata)
+}
