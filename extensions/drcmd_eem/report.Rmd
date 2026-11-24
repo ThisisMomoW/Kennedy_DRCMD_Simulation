@@ -1,0 +1,27 @@
+---
+title: "Kennedy and DRCMD for a Missing Binary Exposure"
+subtitle: "Simulation results report"
+author: "Mo Wang"
+date: "November 23, 2026"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 1
+    number_sections: true
+    latex_engine: pdflatex
+    keep_tex: true
+fontsize: 10pt
+geometry: margin=1in
+params:
+  project_root: "../.."
+---
+
+```{r four_method_document, echo=FALSE, results='asis', message=FALSE, warning=FALSE}
+study_root<-normalizePath(params$project_root,mustWork=TRUE)
+canonical<-readLines(file.path(study_root,'reports/Kennedy_DRCMD_Simulation_Report.Rmd'))
+frontmatter_end<-which(canonical=='---')[2]
+body<-canonical[-seq_len(frontmatter_end)]
+child_env<-new.env(parent=environment())
+child_env$params<-list(project_root=study_root)
+cat(knitr::knit_child(text=body,envir=child_env,quiet=TRUE),sep='\n')
+```
